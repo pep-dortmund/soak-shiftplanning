@@ -67,13 +67,10 @@ def pick_workers(shifts, workers, meal, weekplan):
 
         min_score = min(scores.values())
 
-        workers_with_min_score = list(map(
-            lambda w: w[0],
-            filter(
-                lambda p: p[1] == min_score,
-                scores.items()
-            )
-        ))
+        workers_with_min_score = [
+            worker for worker, score in scores.items()
+            if score == min_score
+        ]
         worker = pick_worker(workers_with_min_score)
         assigned_workers.add(worker)
         shifts[worker]['total_score'] += min_score
