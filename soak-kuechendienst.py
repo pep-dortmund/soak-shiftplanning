@@ -1,5 +1,10 @@
 import random
 from collections import defaultdict
+import itertools
+from argparse import ArgumentParser
+
+parser = ArgumentParser()
+parser.add_argument('teilnehmer')
 
 days = [
     'sunday_arrival',
@@ -48,7 +53,7 @@ def has_no_meal(shifts, worker, meal):
     return shifts[worker][meal] is 0
 
 
-def get_available_workers(shifts, assigned_workers, meal, partners):
+def get_available_workers(shifts, workers, assigned_workers, meal, partners):
     available_workers = workers - assigned_workers
     available_workers = filter(lambda w: has_leisure_time(shifts, w), available_workers)
     available_workers = list(filter(
@@ -61,8 +66,6 @@ def get_available_workers(shifts, assigned_workers, meal, partners):
                 if worker in available_workers:
                     available_workers.remove(worker)
 
-    # print 'AW after checking partners', len(available_workers)
-
     return available_workers
 
 
@@ -70,42 +73,18 @@ def pick_worker(available_workers):
     return random.choice(list(available_workers))
 
 
-def pick_workers(shifts, meal):
-    assigned_workers = set([])
-    partners = set([])
+def pick_workers(shifts, workers, meal):
+    assigned_workers = set()
+    partners = set()
 
-    available_workers = get_available_workers(shifts, assigned_workers, meal, partners)
-    if len(available_workers) < 3:
-        raise ValueError(
-            'Not enough available workers: {}'.format(len(available_workers))
-        )
+    for i in range(3):
+        available_workers = get_available_workers(shifts, workers, assigned_workers, meal, partners)
+        worker = pick_worker(available_workers)
+        assigned_workers.add(worker)
+        partners.update(shifts[worker]['partners'])
 
-    one = pick_worker(available_workers)
-    assigned_workers.add(one)
-    partners.update(shifts[one]['partners'])
-
-    available_workers = get_available_workers(shifts, assigned_workers, meal, partners)
-    if len(available_workers) < 2:
-        raise ValueError(
-            'Not enough available workers: {}'.format(len(available_workers))
-        )
-
-    two = pick_worker(available_workers)
-    assigned_workers.add(two)
-    partners.update(shifts[two]['partners'])
-
-    available_workers = get_available_workers(shifts, assigned_workers, meal, partners)
-    if len(available_workers) < 1:
-        raise ValueError(
-            'Not enough available workers: {}'.format(len(available_workers))
-        )
-
-    three = pick_worker(available_workers)
-    assigned_workers.add(three)
-
-    add_partners(shifts, one, two)
-    add_partners(shifts, one, three)
-    add_partners(shifts, two, three)
+    for w1, w2 in itertools.combinations(assigned_workers, 2):
+        add_partners(shifts, w1, w2)
 
     for worker in assigned_workers:
         decrease_leisure_time(shifts, worker)
@@ -115,59 +94,76 @@ def pick_workers(shifts, meal):
 
 
 def create_week_plan(workers):
-        shifts = init_worker_bookkeeping()
-        assigned_workers = set()
+    shifts = init_worker_bookkeeping()
+    weekplan = defaultdict(dict)
 
-        for day in days:
-            if day is 'sunday_departure':
-                meals = ['breakfast']
-            else:
-                meals = ['breakfast', 'lunch', 'dinner']
+    assigned_workers = set()
 
-            assigned_workers_daylist = set()
+    for day in days:
+        if day is 'sunday_departure':
+            meals = ['breakfast']
+        else:
+            meals = ['breakfast', 'lunch', 'dinner']
 
-            for meal in meals:
-                assigned_workers_meallist = pick_workers(shifts, meal)
-                assigned_workers_daylist.update(assigned_workers_meallist)
+        assigned_workers_day = set()
 
-                print('{:20} {:15} {}, {}, {}'.format(day, meal, *assigned_workers_meallist))
+        for meal in meals:
+            assigned_workers_meal = pick_workers(shifts, workers, meal)
+            assigned_workers_day.update(assigned_workers_meal)
 
-            for worker in assigned_workers:
-                increase_leisure_time(shifts, worker)
+            weekplan[day][meal] = list(assigned_workers_meal)
 
-            assigned_workers = assigned_workers_daylist
+        for worker in assigned_workers:
+            increase_leisure_time(shifts, worker)
 
-        return shifts
+        assigned_workers = assigned_workers_day
+
+    return weekplan, shifts
 
 
-if __name__ == '__main__':
-    with open('teilnehmer.txt') as f:
+def main():
+    args = parser.parse_args()
+
+    with open(args.teilnehmer) as f:
         workers = set(map(str.strip, f.read().splitlines()))
 
     print('Starting iteration')
 
     very_lucky_people = True
+    counter = 0
     while very_lucky_people:
+        counter += 1
+
+        print(f'Iteration {counter}')
 
         try:
-            shifts = create_week_plan(workers)
-        except ValueError:
-            print('Not successfull')
+            weekplan, shifts = create_week_plan(workers)
+        except IndexError as e:
+            print(e)
             continue
-
-        very_lucky_people = False
-        for worker in workers:
-            if shifts[worker]['breakfast'] + shifts[worker]['lunch'] + shifts[worker]['dinner'] == 1 or shifts[worker]['breakfast'] + shifts[worker]['lunch'] + shifts[worker]['dinner'] == 0:
-                very_lucky_people = True
 
         shift_counts = {
             w: shifts[w]['breakfast'] + shifts[w]['lunch'] + shifts[w]['dinner']
             for w in workers
         }
 
-        very_lucky_people = any(s < 2 for s in shift_counts.values())
+        lucky_people = sum(s < 3 for s in shift_counts.values())
+        print('  Lucky people:', lucky_people)
 
-    print('\nLucky:')
-    for worker in workers:
-        if shifts[worker]['breakfast'] + shifts[worker]['lunch'] + shifts[worker]['dinner'] == 2:
-            print(worker)
+        very_lucky_people = sum(s < 2 for s in shift_counts.values())
+        print('  Very lucky people:', very_lucky_people)
+
+    for day, meals in weekplan.items():
+        print(f'{f"  {day}  ":#^80}'.format())
+        for meal, assigned_workers in meals.items():
+            print('  {:15}: {}, {}, {}'.format(meal, *list(assigned_workers)))
+
+        print()
+    print()
+
+    for w, c in sorted(shift_counts.items(), key=lambda w: w[1]):
+        print(f'{w:25} {c}')
+
+
+if __name__ == '__main__':
+    main()
