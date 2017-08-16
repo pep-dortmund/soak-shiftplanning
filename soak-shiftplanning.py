@@ -3,8 +3,19 @@ from collections import defaultdict
 import itertools
 from argparse import ArgumentParser
 
+random.seed(0)
+
 parser = ArgumentParser()
 parser.add_argument('teilnehmer')
+
+
+penalties = {
+    'same_meal': 2,
+    'known_partner': 10,
+    'day_before': 25,
+    'same_day': 100,
+}
+
 
 days = [
     'sunday_arrival',
@@ -60,11 +71,9 @@ def get_available_workers(shifts, workers, assigned_workers, meal, partners):
         lambda w: has_no_meal(shifts, w, meal), available_workers
     ))
 
-    for partner in partners:
-        for worker in workers:
-            if partner in shifts[worker]['partners']:
-                if worker in available_workers:
-                    available_workers.remove(worker)
+    for worker in available_workers.copy():
+        if any(p in partners for p in shifts[worker]['partners']):
+            available_workers.remove(worker)
 
     return available_workers
 
