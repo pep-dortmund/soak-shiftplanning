@@ -153,8 +153,9 @@ def main():
         very_lucky_people = sum(s < 2 for s in shift_counts.values())
         print('  Very lucky people:', very_lucky_people)
 
+    print('\n\n')
     for day, meals in weekplan.items():
-        print(f'{f"  {day}  ":#^80}'.format())
+        print(f'{f"  {day}  ":#^30}')
         for meal, assigned_workers in meals.items():
             print('  {:15}: {}, {}, {}'.format(meal, *list(assigned_workers)))
 
