@@ -9,15 +9,14 @@ parser = ArgumentParser()
 parser.add_argument('teilnehmer')
 
 num_workers = 3
-max_allowed_score = 400
 
 meals = defaultdict(lambda: ['breakfast', 'lunch', 'dinner'])
 meals['sunday_departure'] = ['breakfast']
 
 penalties = {
-    'same_meal': 5,
-    'day_before': 23,
-    'known_partner': 47,
+    'same_meal': 50,
+    'day_before': 50,
+    'known_partner': 25,
     'total_shifts': 100,
     'same_day': 200,
 }
@@ -132,8 +131,9 @@ def main():
     print('Starting iteration')
 
     counter = 0
-    max_score = max_allowed_score + 1
-    while max_score > max_allowed_score:
+    max_allowed_score = 230 * len(workers)
+    total_score = max_allowed_score + 1
+    while total_score > max_allowed_score:
         counter += 1
 
         print(f'Iteration {counter}')
@@ -144,13 +144,9 @@ def main():
             print(e)
             continue
 
-        shift_counts = {
-            w: shifts[w]['breakfast'] + shifts[w]['lunch'] + shifts[w]['dinner']
-            for w in workers
-        }
-
-        max_score = max(w['total_score'] for w in shifts.values())
-        print(max_score)
+        total_score = sum(w['total_score'] for w in shifts.values())
+        print(total_score)
+        print(total_score / len(workers))
 
     print('\n\n')
     for day, meals in zip(days, weekplan):
@@ -161,8 +157,10 @@ def main():
         print()
     print()
 
-    for w, c in sorted(shift_counts.items(), key=lambda w: w[1]):
-        print(f'{w:25} {c}')
+    for w, c in sorted(shifts.items(), key=lambda w: w[0]):
+        total = c["breakfast"] + c["lunch"] + c["dinner"]
+        print(f'{"Name":25} b l d total score')
+        print(f'{w:25} {c["breakfast"]:1} {c["lunch"]:1} {c["dinner"]:1} {total:5} {c["total_score"]:5}')
 
 
 if __name__ == '__main__':
