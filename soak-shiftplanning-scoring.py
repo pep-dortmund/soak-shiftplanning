@@ -19,6 +19,7 @@ penalties = {
     'known_partner': 25,
     'total_shifts': 100,
     'same_day': 200,
+    'same_semester': 10,
 }
 
 days = [
@@ -33,15 +34,16 @@ days = [
 ]
 
 
-def init_worker_bookkeeping():
-    return defaultdict(lambda: {
+def init_worker_bookkeeping(workers, semesters):
+    return {worker: {
+        'semester': semester,
         'total_score': 0,
         'breakfast': 0,
         'lunch': 0,
         'dinner': 0,
         'partners': [],
         'leisure_time': 1,
-    })
+    } for worker, semester in zip(workers, semesters)}
 
 
 def increase_assignment(shifts, worker, assignement):
@@ -103,13 +105,20 @@ def score_workers(shifts, workers, assigned_workers, meal, weekplan):
         n_partners = sum(p in shifts[worker]['partners'] for p in assigned_workers)
         scores[worker] += n_partners * penalties['known_partner']
 
+        n_same_semester = sum(
+            shifts[p]['semester'] == shifts[worker]['semester']
+            for p in assigned_workers
+        )
+        scores[worker] += n_same_semester * penalties['same_semester']
+
         scores[worker] += shifts[worker][meal] * penalties['same_meal']
 
     return scores
 
 
-def create_week_plan(workers):
-    shifts = init_worker_bookkeeping()
+def create_week_plan(workers, semesters):
+    shifts = init_worker_bookkeeping(workers, semesters)
+    workers = set(workers)
     weekplan = []
 
     for day in days:
@@ -126,7 +135,15 @@ def main():
     args = parser.parse_args()
 
     with open(args.teilnehmer) as f:
-        workers = set(map(str.strip, f.read().splitlines()))
+        workers = []
+        semesters = []
+
+        for line in f:
+            line = line.strip()
+            if line:
+                worker, semester = line.split(',')
+                workers.append(worker)
+                semesters.append(semester)
 
     print('Starting iteration')
 
@@ -139,7 +156,7 @@ def main():
         print(f'Iteration {counter}')
 
         try:
-            weekplan, shifts = create_week_plan(workers)
+            weekplan, shifts = create_week_plan(workers, semesters)
         except IndexError as e:
             print(e)
             continue

@@ -1,25 +1,25 @@
-Alexandra
-Annette
-Carina
-Didi
-Ekkehard
-Eleonora
-Elisabeth
-Elma
-Erdmann
-Guntram
-Helfried B
-Helfried A
-Helma
-Katharine
-Leonie
-Lili
-Luca
-Mario
-Oswald B
-Oswald A
-Reiner
-Ricarda
-Rudi
-Ruedi
-Sepp
+Alexandra,2
+Annette,2
+Carina,2
+Didi,4
+Ekkehard,4
+Eleonora,4
+Elisabeth,6
+Elma,6
+Erdmann,6
+Guntram,8
+Helfried B,8
+Helfried A,8
+Helma,10
+Katharine10,
+Leonie,12
+Lili,12
+Luca,12
+Mario,2
+Oswald B,4
+Oswald A,8
+Reiner,8
+Ricarda,10
+Rudi,12
+Ruedi,14
+Sepp,12
