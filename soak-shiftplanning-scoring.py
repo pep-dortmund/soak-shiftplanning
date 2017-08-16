@@ -14,7 +14,7 @@ meals = defaultdict(lambda: ['breakfast', 'lunch', 'dinner'])
 meals['sunday_departure'] = ['breakfast']
 
 penalties = {
-    'same_meal': 50,
+    'same_meal': 100,
     'day_before': 50,
     'known_partner': 25,
     'total_shifts': 100,
@@ -87,32 +87,38 @@ def pick_workers(shifts, workers, meal, weekplan):
 
 
 def score_workers(shifts, workers, assigned_workers, meal, weekplan):
-    scores = defaultdict(int)
+    return {
+        worker: score_worker(shifts, worker, assigned_workers, meal, weekplan)
+        for worker in workers - assigned_workers
+    }
 
-    for worker in workers - assigned_workers:
-        n_same_day = sum(worker in m for m in weekplan[-1].values())
-        scores[worker] += n_same_day * penalties['same_day']
 
-        if len(weekplan) > 1:
-            n_day_before = sum(worker in m for m in weekplan[-2].values())
-            scores[worker] += n_day_before * penalties['day_before']
+def score_worker(shifts, worker, assigned_workers, meal, weekplan):
+    score = 0
 
-        total_shifts = sum(
-            shifts[worker][m] for m in ('breakfast', 'lunch', 'dinner')
-        )
-        scores[worker] += total_shifts * penalties['total_shifts']
+    n_same_day = sum(worker in m for m in weekplan[-1].values())
+    score += n_same_day * penalties['same_day']
 
-        n_partners = sum(p in shifts[worker]['partners'] for p in assigned_workers)
-        scores[worker] += n_partners * penalties['known_partner']
+    if len(weekplan) > 1:
+        n_day_before = sum(worker in m for m in weekplan[-2].values())
+        score += n_day_before * penalties['day_before']
 
-        n_same_semester = sum(
-            shifts[p]['semester'] == shifts[worker]['semester']
-            for p in assigned_workers
-        )
-        scores[worker] += n_same_semester * penalties['same_semester']
-        scores[worker] += shifts[worker][meal] * penalties['same_meal']
+    total_shifts = sum(
+        shifts[worker][m] for m in ('breakfast', 'lunch', 'dinner')
+    )
+    score += total_shifts * penalties['total_shifts']
 
-    return scores
+    n_partners = sum(p in shifts[worker]['partners'] for p in assigned_workers)
+    score += n_partners * penalties['known_partner']
+
+    n_same_semester = sum(
+        shifts[p]['semester'] == shifts[worker]['semester']
+        for p in assigned_workers
+    )
+    score += n_same_semester * penalties['same_semester']
+    score += shifts[worker][meal] * penalties['same_meal']
+
+    return score
 
 
 def create_week_plan(workers, semesters):
@@ -147,7 +153,7 @@ def main():
     print('Starting iteration')
 
     counter = 0
-    max_allowed_score = 230 * len(workers)
+    max_allowed_score = 255 * len(workers)
     total_score = max_allowed_score + 1
     while total_score > max_allowed_score:
         counter += 1
@@ -175,9 +181,9 @@ def main():
         print()
     print()
 
+    print(f'{"Name":25} b l d total score')
     for w, c in sorted(shifts.items(), key=lambda w: w[0]):
         total = c["breakfast"] + c["lunch"] + c["dinner"]
-        print(f'{"Name":25} b l d total score')
         print(f'{w:25} {c["breakfast"]:1} {c["lunch"]:1} {c["dinner"]:1} {total:5} {c["total_score"]:5}')
 
 
