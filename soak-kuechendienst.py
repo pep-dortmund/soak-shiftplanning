@@ -130,7 +130,7 @@ def create_week_plan(workers):
                 assigned_workers_meallist = pick_workers(shifts, meal)
                 assigned_workers_daylist.update(assigned_workers_meallist)
 
-                print('{0:20} {1:15} {2}'.format(day, meal, assigned_workers_meallist))
+                print('{:20} {:15} {}, {}, {}'.format(day, meal, *assigned_workers_meallist))
 
             for worker in assigned_workers:
                 increase_leisure_time(shifts, worker)
@@ -160,17 +160,14 @@ if __name__ == '__main__':
             if shifts[worker]['breakfast'] + shifts[worker]['lunch'] + shifts[worker]['dinner'] == 1 or shifts[worker]['breakfast'] + shifts[worker]['lunch'] + shifts[worker]['dinner'] == 0:
                 very_lucky_people = True
 
+        shift_counts = {
+            w: shifts[w]['breakfast'] + shifts[w]['lunch'] + shifts[w]['dinner']
+            for w in workers
+        }
+
+        very_lucky_people = any(s < 2 for s in shift_counts.values())
+
     print('\nLucky:')
     for worker in workers:
         if shifts[worker]['breakfast'] + shifts[worker]['lunch'] + shifts[worker]['dinner'] == 2:
-            print(worker)
-
-    print('\nVery Lucky:')
-    for worker in workers:
-        if shifts[worker]['breakfast'] + shifts[worker]['lunch'] + shifts[worker]['dinner'] == 1:
-            print(worker)
-
-    print('\nVery Very Lucky (if somebody turns out to be here you should definetly think about replacing somebody unlucky with him):')
-    for worker in workers:
-        if shifts[worker]['breakfast'] + shifts[worker]['lunch'] + shifts[worker]['dinner'] == 0:
             print(worker)
