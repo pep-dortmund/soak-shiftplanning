@@ -11,7 +11,7 @@ Guntram,8
 Helfried B,8
 Helfried A,8
 Helma,10
-Katharine10,
+Katharine,10
 Leonie,12
 Lili,12
 Luca,12

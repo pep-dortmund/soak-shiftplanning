@@ -110,7 +110,6 @@ def score_workers(shifts, workers, assigned_workers, meal, weekplan):
             for p in assigned_workers
         )
         scores[worker] += n_same_semester * penalties['same_semester']
-
         scores[worker] += shifts[worker][meal] * penalties['same_meal']
 
     return scores
@@ -169,8 +168,10 @@ def main():
     for day, meals in zip(days, weekplan):
         print(f'{f"  {day}  ":#^30}')
         for meal, assigned_workers in meals.items():
-            print('  {:15}: {}, {}, {}'.format(meal, *list(assigned_workers)))
-
+            print(f'  {meal:15}:', end='')
+            for worker in sorted(assigned_workers):
+                print(f'{worker} ({shifts[worker]["semester"]})', end=', ')
+            print()
         print()
     print()
 
