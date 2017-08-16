@@ -9,16 +9,17 @@ parser = ArgumentParser()
 parser.add_argument('teilnehmer')
 
 num_workers = 3
+max_allowed_score = 400
 
 meals = defaultdict(lambda: ['breakfast', 'lunch', 'dinner'])
 meals['sunday_departure'] = ['breakfast']
 
 penalties = {
     'same_meal': 5,
-    'known_partner': 5,
-    'day_before': 25,
-    'same_day': 100,
+    'day_before': 23,
+    'known_partner': 47,
     'total_shifts': 100,
+    'same_day': 200,
 }
 
 days = [
@@ -75,8 +76,6 @@ def pick_workers(shifts, workers, meal, weekplan):
         assigned_workers.add(worker)
         shifts[worker]['total_score'] += min_score
 
-        print(min_score, worker)
-
     for w1, w2 in itertools.combinations(assigned_workers, 2):
         add_partners(shifts, w1, w2)
 
@@ -132,9 +131,9 @@ def main():
 
     print('Starting iteration')
 
-    very_lucky_people = True
     counter = 0
-    while very_lucky_people:
+    max_score = max_allowed_score + 1
+    while max_score > max_allowed_score:
         counter += 1
 
         print(f'Iteration {counter}')
@@ -150,11 +149,8 @@ def main():
             for w in workers
         }
 
-        lucky_people = sum(s < 3 for s in shift_counts.values())
-        print('  Lucky people:', lucky_people)
-
-        very_lucky_people = sum(s < 2 for s in shift_counts.values())
-        print('  Very lucky people:', very_lucky_people)
+        max_score = max(w['total_score'] for w in shifts.values())
+        print(max_score)
 
     print('\n\n')
     for day, meals in zip(days, weekplan):
