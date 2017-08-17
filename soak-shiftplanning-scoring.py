@@ -14,9 +14,9 @@ meals = defaultdict(lambda: ['breakfast', 'lunch', 'dinner'])
 meals['sunday_departure'] = ['breakfast']
 
 penalties = {
-    'same_meal': 100,
+    'same_meal': {'lunch': 25, 'breakfast': 100, 'dinner': 25},
     'day_before': 50,
-    'known_partner': 25,
+    'known_partner': 100,
     'total_shifts': 100,
     'same_day': 200,
     'same_semester': 10,
@@ -116,7 +116,7 @@ def score_worker(shifts, worker, assigned_workers, meal, weekplan):
         for p in assigned_workers
     )
     score += n_same_semester * penalties['same_semester']
-    score += shifts[worker][meal] * penalties['same_meal']
+    score += shifts[worker][meal] * penalties['same_meal'][meal]
 
     return score
 
