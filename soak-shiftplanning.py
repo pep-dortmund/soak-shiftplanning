@@ -3,10 +3,10 @@ from collections import defaultdict
 import itertools
 from argparse import ArgumentParser
 
-random.seed(0)
 
 parser = ArgumentParser()
 parser.add_argument('teilnehmer')
+parser.add_argument('--seed', type=int, default=0)
 
 num_workers = 3
 
@@ -60,7 +60,7 @@ def pick_worker(available_workers):
 
 
 def pick_workers(shifts, workers, meal, weekplan):
-    assigned_workers = set()
+    assigned_workers = []
 
     for i in range(num_workers):
         scores = score_workers(
@@ -74,7 +74,7 @@ def pick_workers(shifts, workers, meal, weekplan):
             if score == min_score
         ]
         worker = pick_worker(workers_with_min_score)
-        assigned_workers.add(worker)
+        assigned_workers.append(worker)
         shifts[worker]['total_score'] += min_score
 
     for w1, w2 in itertools.combinations(assigned_workers, 2):
@@ -89,7 +89,8 @@ def pick_workers(shifts, workers, meal, weekplan):
 def score_workers(shifts, workers, assigned_workers, meal, weekplan):
     return {
         worker: score_worker(shifts, worker, assigned_workers, meal, weekplan)
-        for worker in workers - assigned_workers
+        for worker in workers
+        if worker not in assigned_workers
     }
 
 
@@ -123,7 +124,7 @@ def score_worker(shifts, worker, assigned_workers, meal, weekplan):
 
 def create_week_plan(workers, semesters):
     shifts = init_worker_bookkeeping(workers, semesters)
-    workers = set(workers)
+    workers = list(workers)
     weekplan = []
 
     for day in days:
@@ -138,6 +139,7 @@ def create_week_plan(workers, semesters):
 
 def main():
     args = parser.parse_args()
+    random.seed(args.seed)
 
     with open(args.teilnehmer) as f:
         workers = []
@@ -170,6 +172,11 @@ def main():
         print(total_score)
         print(total_score / len(workers))
 
+    print(f'{"Name":25} b l d total score')
+    for w, c in sorted(shifts.items(), key=lambda w: w[0]):
+        total = c["breakfast"] + c["lunch"] + c["dinner"]
+        print(f'{w:25} {c["breakfast"]:1} {c["lunch"]:1} {c["dinner"]:1} {total:5} {c["total_score"]:5}')
+
     print('\n\n')
     for day, meals in zip(days, weekplan):
         print(f'{f"  {day}  ":#^30}')
@@ -180,11 +187,6 @@ def main():
             print()
         print()
     print()
-
-    print(f'{"Name":25} b l d total score')
-    for w, c in sorted(shifts.items(), key=lambda w: w[0]):
-        total = c["breakfast"] + c["lunch"] + c["dinner"]
-        print(f'{w:25} {c["breakfast"]:1} {c["lunch"]:1} {c["dinner"]:1} {total:5} {c["total_score"]:5}')
 
 
 if __name__ == '__main__':
