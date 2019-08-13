@@ -8,8 +8,10 @@ parser = ArgumentParser()
 parser.add_argument('teilnehmer')
 parser.add_argument('--seed', type=int, default=0)
 
-num_workers_meals = 3
-num_workers_cleaning = 4
+num_workers = defaultdict(lambda: 3)    # three workers needed by default
+num_workers['cleaning'] = 4
+
+max_score_per_worker = 345
 
 tasks = defaultdict(lambda: ['breakfast', 'lunch', 'dinner', 'cleaning'])
 tasks['sunday_arrival'] = ['breakfast', 'lunch', 'dinner']
@@ -62,10 +64,10 @@ def pick_worker(available_workers):
     return random.choice(list(available_workers))
 
 
-def pick_workers(shifts, workers, task, weekplan, num_workers):
+def pick_workers(shifts, workers, task, weekplan):
     assigned_workers = []
 
-    for i in range(num_workers):
+    for i in range(num_workers[task]):
         scores = score_workers(
             shifts, workers, assigned_workers, task, weekplan
         )
@@ -134,8 +136,7 @@ def create_week_plan(workers, semesters):
         weekplan.append({})
 
         for task in tasks[day]:
-            num_workers = num_workers_cleaning if task=='cleaning' else num_workers_meals
-            assigned_workers_task = pick_workers(shifts, workers, task, weekplan, num_workers)
+            assigned_workers_task = pick_workers(shifts, workers, task, weekplan)
             weekplan[-1][task] = list(assigned_workers_task)
 
     return weekplan, shifts
@@ -159,7 +160,7 @@ def main():
     print('Starting iteration')
 
     counter = 0
-    max_allowed_score = 530 * len(workers)  # 255 without cleaning task
+    max_allowed_score = max_score_per_worker * len(workers)
     total_score = max_allowed_score + 1
     while total_score > max_allowed_score:
         counter += 1
