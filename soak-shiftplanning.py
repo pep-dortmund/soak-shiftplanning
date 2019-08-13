@@ -8,13 +8,15 @@ parser = ArgumentParser()
 parser.add_argument('teilnehmer')
 parser.add_argument('--seed', type=int, default=0)
 
-num_workers = 3
+num_workers_meals = 3
+num_workers_cleaning = 4
 
-meals = defaultdict(lambda: ['breakfast', 'lunch', 'dinner'])
-meals['sunday_departure'] = ['breakfast']
+tasks = defaultdict(lambda: ['breakfast', 'lunch', 'dinner', 'cleaning'])
+tasks['sunday_arrival'] = ['breakfast', 'lunch', 'dinner']
+tasks['sunday_departure'] = ['breakfast']
 
 penalties = {
-    'same_meal': {'lunch': 25, 'breakfast': 100, 'dinner': 25},
+    'same_task': {'lunch': 25, 'breakfast': 100, 'dinner': 25, 'cleaning': 200},
     'day_before': 50,
     'known_partner': 100,
     'total_shifts': 100,
@@ -41,6 +43,7 @@ def init_worker_bookkeeping(workers, semesters):
         'breakfast': 0,
         'lunch': 0,
         'dinner': 0,
+        'cleaning': 0,
         'partners': [],
         'leisure_time': 1,
     } for worker, semester in zip(workers, semesters)}
@@ -59,12 +62,12 @@ def pick_worker(available_workers):
     return random.choice(list(available_workers))
 
 
-def pick_workers(shifts, workers, meal, weekplan):
+def pick_workers(shifts, workers, task, weekplan, num_workers):
     assigned_workers = []
 
     for i in range(num_workers):
         scores = score_workers(
-            shifts, workers, assigned_workers, meal, weekplan
+            shifts, workers, assigned_workers, task, weekplan
         )
 
         min_score = min(scores.values())
@@ -81,20 +84,20 @@ def pick_workers(shifts, workers, meal, weekplan):
         add_partners(shifts, w1, w2)
 
     for worker in assigned_workers:
-        increase_assignment(shifts, worker, meal)
+        increase_assignment(shifts, worker, task)
 
     return assigned_workers
 
 
-def score_workers(shifts, workers, assigned_workers, meal, weekplan):
+def score_workers(shifts, workers, assigned_workers, task, weekplan):
     return {
-        worker: score_worker(shifts, worker, assigned_workers, meal, weekplan)
+        worker: score_worker(shifts, worker, assigned_workers, task, weekplan)
         for worker in workers
         if worker not in assigned_workers
     }
 
 
-def score_worker(shifts, worker, assigned_workers, meal, weekplan):
+def score_worker(shifts, worker, assigned_workers, task, weekplan):
     score = 0
 
     n_same_day = sum(worker in m for m in weekplan[-1].values())
@@ -105,7 +108,7 @@ def score_worker(shifts, worker, assigned_workers, meal, weekplan):
         score += n_day_before * penalties['day_before']
 
     total_shifts = sum(
-        shifts[worker][m] for m in ('breakfast', 'lunch', 'dinner')
+        shifts[worker][m] for m in ('breakfast', 'lunch', 'dinner', 'cleaning')
     )
     score += total_shifts * penalties['total_shifts']
 
@@ -117,7 +120,7 @@ def score_worker(shifts, worker, assigned_workers, meal, weekplan):
         for p in assigned_workers
     )
     score += n_same_semester * penalties['same_semester']
-    score += shifts[worker][meal] * penalties['same_meal'][meal]
+    score += shifts[worker][task] * penalties['same_task'][task]
 
     return score
 
@@ -130,9 +133,10 @@ def create_week_plan(workers, semesters):
     for day in days:
         weekplan.append({})
 
-        for meal in meals[day]:
-            assigned_workers_meal = pick_workers(shifts, workers, meal, weekplan)
-            weekplan[-1][meal] = list(assigned_workers_meal)
+        for task in tasks[day]:
+            num_workers = num_workers_cleaning if task=='cleaning' else num_workers_meals
+            assigned_workers_task = pick_workers(shifts, workers, task, weekplan, num_workers)
+            weekplan[-1][task] = list(assigned_workers_task)
 
     return weekplan, shifts
 
@@ -155,7 +159,7 @@ def main():
     print('Starting iteration')
 
     counter = 0
-    max_allowed_score = 255 * len(workers)
+    max_allowed_score = 530 * len(workers)  # 255 without cleaning task
     total_score = max_allowed_score + 1
     while total_score > max_allowed_score:
         counter += 1
@@ -169,24 +173,23 @@ def main():
             continue
 
         total_score = sum(w['total_score'] for w in shifts.values())
-        print(total_score)
-        print(total_score / len(workers))
+        print(f"\ttotal score {total_score}")
+        print(f"\tper worker  {total_score/len(workers)}")
 
-    print(f'{"Name":25} b l d total score')
+    print(f'\n{"Name":25} b l d c total score')
     for w, c in sorted(shifts.items(), key=lambda w: w[0]):
-        total = c["breakfast"] + c["lunch"] + c["dinner"]
-        print(f'{w:25} {c["breakfast"]:1} {c["lunch"]:1} {c["dinner"]:1} {total:5} {c["total_score"]:5}')
+        total = c["breakfast"] + c["lunch"] + c["dinner"] + c["cleaning"]
+        print(f'{w:25} {c["breakfast"]:1} {c["lunch"]:1} {c["dinner"]:1} {c["cleaning"]:1} {total:5} {c["total_score"]:5}')
 
     print('\n\n')
-    for day, meals in zip(days, weekplan):
+    for day, tasks in zip(days, weekplan):
         print(f'{f"  {day}  ":#^30}')
-        for meal, assigned_workers in meals.items():
-            print(f'  {meal:15}:', end='')
+        for task, assigned_workers in tasks.items():
+            print(f'  {task:15}:', end='')
             for worker in sorted(assigned_workers):
                 print(f'{worker} ({shifts[worker]["semester"]})', end=', ')
             print()
         print()
-    print()
 
 
 if __name__ == '__main__':
